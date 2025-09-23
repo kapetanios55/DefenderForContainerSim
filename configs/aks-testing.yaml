@@ -55,21 +55,16 @@ logging:
   
 defender:
   expected_alerts:
-    - "Possible Web Shell activity detected"
+    - "Possible Web Shell Activity Detected"
+    - "Suspicious access to workload identity token or service account token detected"
+    - "Possible Secret Reconnaissance Detected"
+    - "Sensitive Files Access Detected"
+    - "Digital currency mining related behavior detected"
+    - "Possible Cryptocoinminer download detected"
+    - "Command within a container accessed ld.so.preload (Preview)"
+    - "Kubernetes CPU optimization detected (Preview)"
     - "Suspicious Kubernetes service account operation detected"
-    - "Network scanning tool detected"
-    - "Access to cloud metadata service detected"
-    - "Sensitive files access detected"
-    - "Possible secret reconnaissance detected"
-    - "Kubernetes CPU optimization detected"
-    - "Command within a container accessed ld.so.preload"
-    - "Possible Crypto miners download detected"
     - "A drift binary detected executing in the container"
-    - "Privileged container detected"
-    - "Suspicious mount detected"
-    - "Container with sensitive volume mount detected"
-    - "Privileged operation detected"
-    - "Container with high privileges detected"
     
 cleanup:
   auto_cleanup: false  # Set to true for automatic cleanup

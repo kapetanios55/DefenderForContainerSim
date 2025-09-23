@@ -181,8 +181,7 @@ Write-Host "🎉 Setup completed successfully!" -ForegroundColor Green
 Write-Host ""
 Write-Host "Next steps:" -ForegroundColor Cyan
 Write-Host "1. Run the enhanced simulation: python enhanced_simulation.py" -ForegroundColor White
-Write-Host "2. Or run the original Microsoft simulation: python simulation.py" -ForegroundColor White
-Write-Host "3. Or run with specific config: python enhanced_simulation.py --config configs/aks-testing.yaml" -ForegroundColor White
+Write-Host "2. Run with specific config: python enhanced_simulation.py --config configs/aks-testing.yaml" -ForegroundColor White
 Write-Host ""
 Write-Host "Configuration files:" -ForegroundColor Cyan
 Write-Host "- configs/aks-testing.yaml - AKS cluster configuration" -ForegroundColor White

@@ -14,9 +14,7 @@
 python enhanced_simulation.py
 ```
 
-#### Option B: Original Microsoft Simulation  
 ```bash
-python simulation.py
 ```
 
 #### Option C: Custom Configuration

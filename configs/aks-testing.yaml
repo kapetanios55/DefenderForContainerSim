@@ -1,0 +1,75 @@
+# Configuration for AKS Testing Cluster
+# Target: /subscriptions/4cc2b540-c855-4eef-b689-a669d97dd70d/resourceGroups/ak-demo/providers/Microsoft.ContainerService/managedClusters/AKSTesting
+
+aks_cluster:
+  subscription_id: "4cc2b540-c855-4eef-b689-a669d97dd70d"
+  resource_group: "ak-demo"
+  cluster_name: "AKSTesting"
+  
+helm:
+  chart: "oci://ghcr.io/microsoft/defender-for-cloud/attacksimulation/mdc-simulation"
+  release: "enhanced-mdc-simulation"
+  namespace: "enhanced-mdc-simulation"
+  
+scenarios:
+  basic:
+    - "recon"
+    - "lateral-mov" 
+    - "secrets"
+    - "crypto"
+    - "webshell"
+  
+  enhanced:
+    - "recon"
+    - "lateral-mov"
+    - "secrets"
+    - "crypto"
+    - "webshell"
+    
+  advanced:
+    - "recon"
+    - "secrets"
+    - "crypto"
+    
+  all:
+    - "recon"
+    - "lateral-mov"
+    - "secrets" 
+    - "crypto"
+    - "webshell"
+
+timeouts:
+  pod_creation: 300      # 5 minutes
+  scenario_execution: 300 # 5 minutes
+  helm_deployment: 300   # 5 minutes
+  
+monitoring:
+  alert_check_interval: 60    # Check for alerts every 60 seconds
+  max_wait_for_alerts: 3600   # Wait up to 1 hour for alerts
+  
+logging:
+  level: "INFO"
+  save_logs: true
+  log_retention_days: 30
+  
+defender:
+  expected_alerts:
+    - "Possible Web Shell activity detected"
+    - "Suspicious Kubernetes service account operation detected"
+    - "Network scanning tool detected"
+    - "Access to cloud metadata service detected"
+    - "Sensitive files access detected"
+    - "Possible secret reconnaissance detected"
+    - "Kubernetes CPU optimization detected"
+    - "Command within a container accessed ld.so.preload"
+    - "Possible Crypto miners download detected"
+    - "A drift binary detected executing in the container"
+    - "Privileged container detected"
+    - "Suspicious mount detected"
+    - "Container with sensitive volume mount detected"
+    - "Privileged operation detected"
+    - "Container with high privileges detected"
+    
+cleanup:
+  auto_cleanup: false  # Set to true for automatic cleanup
+  cleanup_timeout: 300 # 5 minutes timeout for cleanup operations

@@ -103,10 +103,31 @@ if (Test-Path "requirements.txt") {
 Write-Host ""
 Write-Host "🎯 Configuring AKS cluster access..." -ForegroundColor Yellow
 
-# Set up AKS cluster credentials
-$subscriptionId = "4cc2b540-c855-4eef-b689-a669d97dd70d"
-$resourceGroup = "ak-demo"
-$clusterName = "AKSTesting"
+# Get AKS cluster credentials - check environment variables first
+$subscriptionId = $env:AZURE_SUBSCRIPTION_ID
+$resourceGroup = $env:AZURE_RESOURCE_GROUP
+$clusterName = $env:AZURE_CLUSTER_NAME
+
+# If environment variables are not set, prompt user
+if (-not $subscriptionId) {
+    Write-Host ""
+    Write-Host "⚠️  AKS CLUSTER CONFIGURATION REQUIRED!" -ForegroundColor Red
+    Write-Host "Please provide your AKS cluster details:" -ForegroundColor Yellow
+    Write-Host ""
+    $subscriptionId = Read-Host "Enter your Azure Subscription ID"
+}
+if (-not $resourceGroup) {
+    $resourceGroup = Read-Host "Enter your Resource Group name"
+}
+if (-not $clusterName) {
+    $clusterName = Read-Host "Enter your AKS Cluster name"
+}
+
+# Validate inputs
+if (-not $subscriptionId -or -not $resourceGroup -or -not $clusterName) {
+    Write-Host "❌ All cluster details are required. Exiting..." -ForegroundColor Red
+    exit 1
+}
 
 Write-Host "Connecting to AKS cluster: $resourceGroup/$clusterName"
 

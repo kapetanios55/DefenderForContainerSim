@@ -59,9 +59,9 @@ While the simulation runs, monitor alerts in:
 
 ## 🎯 Target AKS Cluster
 
-**Subscription**: `4cc2b540-c855-4eef-b689-a669d97dd70d`  
-**Resource Group**: `ak-demo`  
-**Cluster**: `AKSTesting`
+**CONFIGURATION REQUIRED**: Set your cluster details using environment variables, config file, or interactive prompts  
+**Methods**: Environment variables, configs/aks-testing.yaml, or interactive prompts  
+**Find clusters**: `az aks list --output table`
 
 ## 🔧 Quick Troubleshooting
 

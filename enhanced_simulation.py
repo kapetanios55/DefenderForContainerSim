@@ -20,11 +20,30 @@ class EnhancedDefenderSimulation:
         
     def load_config(self, config_file: Optional[str] = None):
         """Load configuration from file or use defaults"""
+        # Check for environment variables first, then use config file or prompt user
+        subscription_id = os.environ.get('AZURE_SUBSCRIPTION_ID')
+        resource_group = os.environ.get('AZURE_RESOURCE_GROUP')
+        cluster_name = os.environ.get('AZURE_CLUSTER_NAME')
+        
+        if not all([subscription_id, resource_group, cluster_name]):
+            print("\n⚠️  CLUSTER CONFIGURATION REQUIRED!")
+            print("Please configure your AKS cluster details in one of these ways:")
+            print("1. Set environment variables: AZURE_SUBSCRIPTION_ID, AZURE_RESOURCE_GROUP, AZURE_CLUSTER_NAME")
+            print("2. Update the configuration in configs/aks-testing.yaml")
+            print("3. Update the default_config below and provide values when prompted\n")
+            
+            if not subscription_id:
+                subscription_id = input("Enter your Azure Subscription ID: ").strip()
+            if not resource_group:
+                resource_group = input("Enter your Resource Group name: ").strip()
+            if not cluster_name:
+                cluster_name = input("Enter your AKS Cluster name: ").strip()
+        
         default_config = {
             "aks_cluster": {
-                "subscription_id": "4cc2b540-c855-4eef-b689-a669d97dd70d",
-                "resource_group": "ak-demo", 
-                "cluster_name": "AKSTesting"
+                "subscription_id": subscription_id,
+                "resource_group": resource_group, 
+                "cluster_name": cluster_name
             },
             "helm": {
                 "chart": "oci://ghcr.io/microsoft/defender-for-cloud/attacksimulation/mdc-simulation",

@@ -1,12 +1,24 @@
-# Configuration for AKS Testing Cluster
-# IMPORTANT: Replace these placeholder values with your actual AKS cluster details
-# Target: /subscriptions/YOUR_SUBSCRIPTION_ID/resourceGroups/YOUR_RESOURCE_GROUP/providers/Microsoft.ContainerService/managedClusters/YOUR_CLUSTER_NAME
+# =================================================================
+# AKS Cluster Configuration Template for Defender for Containers
+# =================================================================
+# 
+# INSTRUCTIONS:
+# 1. Copy this file to a new file (e.g., my-cluster.yaml)
+# 2. Replace the placeholder values below with your actual cluster details
+# 3. Run the simulation with: python enhanced_simulation.py --config my-cluster.yaml
+#
+# To find your cluster details, run: az aks list --output table
+# =================================================================
 
 aks_cluster:
-  subscription_id: "YOUR_SUBSCRIPTION_ID"  # Replace with your Azure subscription ID
-  resource_group: "YOUR_RESOURCE_GROUP"    # Replace with your resource group name
-  cluster_name: "YOUR_CLUSTER_NAME"        # Replace with your AKS cluster name
+  subscription_id: "YOUR_SUBSCRIPTION_ID"      # Replace with your Azure subscription ID
+  resource_group: "YOUR_RESOURCE_GROUP"        # Replace with your resource group name  
+  cluster_name: "YOUR_CLUSTER_NAME"            # Replace with your AKS cluster name
   
+# =================================================================
+# Advanced Configuration (Optional - defaults provided)
+# =================================================================
+
 helm:
   chart: "oci://ghcr.io/microsoft/defender-for-cloud/attacksimulation/mdc-simulation"
   release: "enhanced-mdc-simulation"

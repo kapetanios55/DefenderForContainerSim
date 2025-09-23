@@ -1,5 +1,7 @@
 # Enhanced Defender for Containers Attack Simulation
 
+> **⚠️ NEW USERS**: This tool requires AKS cluster configuration. See [CUSTOMER-README.md](CUSTOMER-README.md) for quick setup, or run `./customer-setup.ps1`
+
 An enhanced version of Microsoft's Defender for Cloud Attack Simulation tool, specifically adapted for testing Defender for Containers in AKS environments with additional real-world attack scenarios and improved usability.
 
 ## Overview
@@ -23,9 +25,34 @@ This tool simulates various attack scenarios commonly used in real-world attacks
 - **Automated cleanup** - Comprehensive resource cleanup after testing
 - **Configuration management** - Easy configuration for different environments
 
-## Target AKS Cluster
+## 🎯 Target AKS Cluster Configuration
 
-**Default Target**: `/subscriptions/4cc2b540-c855-4eef-b689-a669d97dd70d/resourceGroups/ak-demo/providers/Microsoft.ContainerService/managedClusters/AKSTesting`
+**⚠️ IMPORTANT**: This tool requires configuration of your AKS cluster details before use.
+
+### Quick Setup Options:
+
+**Option 1: Environment Variables** (Recommended)
+```bash
+# Set these environment variables
+export AZURE_SUBSCRIPTION_ID="your-subscription-id"
+export AZURE_RESOURCE_GROUP="your-resource-group"
+export AZURE_CLUSTER_NAME="your-cluster-name"
+```
+
+**Option 2: Update Configuration File**
+Edit `configs/aks-testing.yaml` with your cluster details
+
+**Option 3: Interactive Prompt**
+The script will prompt you for cluster details if not configured
+
+### Find Your Cluster Details:
+```bash
+# List your AKS clusters
+az aks list --output table
+
+# Get specific cluster details
+az aks show --name YOUR_CLUSTER_NAME --resource-group YOUR_RESOURCE_GROUP
+```
 
 ## Prerequisites
 
@@ -38,7 +65,7 @@ This tool simulates various attack scenarios commonly used in real-world attacks
 4. **Python 3.7+** installed
 5. **kubectl** configured for your target cluster:
    ```bash
-   az aks get-credentials --name AKSTesting --resource-group ak-demo
+   az aks get-credentials --name YOUR_CLUSTER_NAME --resource-group YOUR_RESOURCE_GROUP
    ```
 
 ## Installation

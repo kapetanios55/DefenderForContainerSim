@@ -142,3 +142,7 @@ kubeconfig
 
 # Azure
 .azure/
+
+# Testing files (not to be pushed to GitHub)
+Testing/
+testing/

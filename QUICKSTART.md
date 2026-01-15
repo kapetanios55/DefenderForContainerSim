@@ -27,6 +27,11 @@ python enhanced_simulation.py --config configs/aks-testing.yaml
 python enhanced_simulation.py --scenarios recon secrets crypto
 ```
 
+#### Option E: Include Binary Drift
+```bash
+python enhanced_simulation.py --scenarios all
+```
+
 ### 3. Monitor Defender Alerts
 
 While the simulation runs, monitor alerts in:
@@ -54,6 +59,7 @@ While the simulation runs, monitor alerts in:
 - Access to cloud metadata service detected
 - Possible Crypto miners download detected
 - Container with high privileges detected
+- Binary drift detected in container
 
 ## 🎯 Target AKS Cluster
 

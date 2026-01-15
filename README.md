@@ -16,6 +16,7 @@ This tool simulates various attack scenarios commonly used in real-world attacks
 - **Web Shell** - Exploit web shells for remote access
 - **Container Escape** - Attempt container breakout techniques
 - **Privilege Escalation** - Escalate privileges within containers
+- **Binary Drift** - Execute binaries not in the original image
 
 ### Enhanced Features
 - **Multi-cluster support** - Target specific AKS clusters by resource ID
@@ -112,6 +113,7 @@ The tool supports flexible configuration through YAML files. See `configs/` dire
 | Crypto Mining | Possible Web Shell activity detected, Kubernetes CPU optimization detected, Command within a container accessed `ld.so.preload`, Possible Crypto miners download detected, A drift binary detected executing in the container |
 | Container Escape | Privileged container detected, Suspicious mount detected, Container with sensitive volume mount detected |
 | Privilege Escalation | Privileged operation detected, Container with high privileges detected |
+| Binary Drift | Binary drift detected in container, A drift binary detected executing in the container |
 
 ## Best Practices
 

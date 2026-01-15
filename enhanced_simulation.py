@@ -52,9 +52,9 @@ class EnhancedDefenderSimulation:
             },
             "scenarios": {
                 "basic": ["recon", "lateral-mov", "secrets", "crypto", "webshell"],
-                "enhanced": ["container-escape", "privilege-escalation", "apt-simulation", "supply-chain"],
+                  "enhanced": ["container-escape", "privilege-escalation", "apt-simulation", "supply-chain", "binary-drift"],
                 "all": ["recon", "lateral-mov", "secrets", "crypto", "webshell", "container-escape", 
-                       "privilege-escalation", "apt-simulation", "supply-chain"]
+                      "privilege-escalation", "apt-simulation", "supply-chain", "binary-drift"]
             },
             "timeouts": {
                 "pod_creation": 300,
@@ -179,21 +179,22 @@ Available Attack Scenarios:
 🎯 ADVANCED SCENARIOS:
    13. APT Simulation - Multi-stage persistent threat
    14. Supply Chain - Malicious image/dependency attacks
+    15. Binary Drift - Execute binaries not in original image
    
 📦 SCENARIO GROUPS:
-   15. Basic Scenarios (1-5) - Original Microsoft scenarios
-   16. Enhanced Scenarios (6-14) - Additional real-world attacks  
-   17. All Scenarios - Complete attack simulation
+    16. Basic Scenarios (1-5) - Original Microsoft scenarios
+    17. Enhanced Scenarios (6-15) - Additional real-world attacks  
+    18. All Scenarios - Complete attack simulation
    
    0. Exit
 """
         print(menu)
         
         while True:
-            choice = input("Select scenario (0-17): ").strip()
-            if choice.isdigit() and 0 <= int(choice) <= 17:
+            choice = input("Select scenario (0-18): ").strip()
+            if choice.isdigit() and 0 <= int(choice) <= 18:
                 return choice
-            print("❌ Invalid selection. Please choose 0-17.")
+            print("\u274c Invalid selection. Please choose 0-18.")
             
     def map_scenario_choice(self, choice: str) -> List[str]:
         """Map user choice to scenario list"""
@@ -212,9 +213,10 @@ Available Attack Scenarios:
             "12": ["privilege-escalation"], 
             "13": ["apt-simulation"],
             "14": ["supply-chain"],
-            "15": self.config["scenarios"]["basic"],
-            "16": self.config["scenarios"]["enhanced"],
-            "17": self.config["scenarios"]["all"]
+            "15": ["binary-drift"],
+            "16": self.config["scenarios"]["basic"],
+            "17": self.config["scenarios"]["enhanced"],
+            "18": self.config["scenarios"]["all"]
         }
         
         return scenario_map.get(choice, [])
@@ -241,7 +243,7 @@ Available Attack Scenarios:
         # Map scenarios to Microsoft-supported ones for Helm deployment
         microsoft_scenarios = ["recon", "lateral-mov", "secrets", "crypto", "webshell"]
         enhanced_scenarios = ["container-escape", "privilege-escalation", "network-scan", "token-theft", 
-                              "resource-exhaustion", "reverse-shell", "apt-simulation", "supply-chain", "service-discovery"]
+                              "resource-exhaustion", "reverse-shell", "apt-simulation", "supply-chain", "service-discovery", "binary-drift"]
         
         # Filter scenarios to only use Microsoft-supported ones for Helm
         helm_scenarios = [s for s in scenarios if s in microsoft_scenarios]
@@ -280,6 +282,28 @@ Available Attack Scenarios:
         except Exception as e:
             print(f"❌ Deployment error: {str(e)}")
             raise
+
+        # Deploy binary drift workload if requested
+        if "binary-drift" in scenarios:
+            self.deploy_binary_drift_workload()
+
+    def deploy_binary_drift_workload(self):
+        """Deploy a workload that triggers binary drift detection"""
+        drift_manifest = os.path.join("Testing", "binary-drift-test.yaml")
+        if not os.path.exists(drift_manifest):
+            print("\u26a0\ufe0f  Binary drift manifest not found: Testing/binary-drift-test.yaml")
+            return
+
+        print("\ud83e\uddea Deploying binary drift workload...")
+        try:
+            subprocess.run([
+                "kubectl", "apply", "-f", drift_manifest, "--validate=false"
+            ], check=True, capture_output=True, text=True, timeout=60)
+            print("\u2705 Binary drift workload deployed")
+        except subprocess.CalledProcessError as e:
+            print(f"\u26a0\ufe0f  Binary drift workload deployment failed: {e.stderr.strip()}")
+        except Exception as e:
+            print(f"\u26a0\ufe0f  Binary drift workload deployment error: {str(e)}")
             
     def wait_for_pods(self):
         """Wait for pods to be ready (not pending)"""
@@ -447,7 +471,8 @@ Available Attack Scenarios:
             "crypto": "Crypto Mining - Cryptocurrency mining simulation",
             "webshell": "Web Shell - Remote command execution via web shell",
             "container-escape": "Container Escape - Attempt container breakout techniques",
-            "privilege-escalation": "Privilege Escalation - Escalate container privileges"
+            "privilege-escalation": "Privilege Escalation - Escalate container privileges",
+            "binary-drift": "Binary Drift - Execute binaries not in original image"
         }
         
         for scenario in scenarios:
@@ -470,6 +495,7 @@ The following alerts should be triggered in Defender for Containers:
 - Command within a container accessed ld.so.preload
 - Possible Crypto miners download detected
 - A drift binary detected executing in the container
+- Binary drift detected in container
 
 ## Log Files
 

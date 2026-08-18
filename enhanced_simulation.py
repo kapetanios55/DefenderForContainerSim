@@ -5,6 +5,7 @@
 import subprocess
 import time
 import argparse
+import json
 import yaml
 import os
 import sys
@@ -17,6 +18,7 @@ class EnhancedDefenderSimulation:
     def __init__(self, config_file: Optional[str] = None):
         self.load_config(config_file)
         self.setup_logging()
+        self.custom_jobs = []
         
     def load_config(self, config_file: Optional[str] = None):
         """Load configuration from file or use defaults"""
@@ -257,56 +259,114 @@ Available Attack Scenarios:
         else:
             scenario_string = "recon"  # Default fallback
         
-        try:
-            # Clean up any existing pods
-            self.cleanup_pods()
-            
-            # Install/upgrade helm chart
-            helm_command = [
-                "helm", "upgrade", "--install", self.HELM_RELEASE, self.HELM_CHART,
-                "--namespace", self.NAMESPACE,
-                "--set", f"scenario={scenario_string}",
-                "--set", f"env.name={self.NAMESPACE}",
-                "--timeout", "5m",
-                "--wait"
-            ]
-            
-            result = subprocess.run(helm_command, capture_output=True, text=True, timeout=300)
-            
-            if result.returncode != 0:
-                print(f"❌ Failed to deploy helm chart: {result.stderr}")
-                raise Exception("Helm deployment failed")
-                
-            print("✅ Helm chart deployed successfully")
-            
-        except Exception as e:
-            print(f"❌ Deployment error: {str(e)}")
-            raise
+        if helm_scenarios:
+            try:
+                self.cleanup_pods()
 
-        # Deploy binary drift workload if requested
-        if "binary-drift" in scenarios:
-            self.deploy_binary_drift_workload()
+                helm_command = [
+                    "helm", "upgrade", "--install", self.HELM_RELEASE, self.HELM_CHART,
+                    "--namespace", self.NAMESPACE,
+                    "--set", f"scenario={scenario_string}",
+                    "--set", f"env.name={self.NAMESPACE}",
+                    "--timeout", "5m",
+                    "--wait"
+                ]
 
-    def deploy_binary_drift_workload(self):
-        """Deploy a workload that triggers binary drift detection"""
-        drift_manifest = os.path.join("Testing", "binary-drift-test.yaml")
-        if not os.path.exists(drift_manifest):
-            print("\u26a0\ufe0f  Binary drift manifest not found: Testing/binary-drift-test.yaml")
-            return
+                result = subprocess.run(helm_command, capture_output=True, text=True, timeout=300)
 
-        print("\ud83e\uddea Deploying binary drift workload...")
-        try:
+                if result.returncode != 0:
+                    print(f"❌ Failed to deploy helm chart: {result.stderr}")
+                    raise Exception("Helm deployment failed")
+
+                print("✅ Helm chart deployed successfully")
+
+            except Exception as e:
+                print(f"❌ Deployment error: {str(e)}")
+                raise
+        else:
+            print("ℹ️  Custom-only run selected; skipping Microsoft Helm chart")
+
+        self.deploy_custom_workloads(custom_scenarios)
+
+    def deploy_custom_workloads(self, scenarios: List[str]):
+        """Deploy Kubernetes Jobs for locally implemented scenarios"""
+        workload_map = {
+            "container-escape": {
+                "job": "container-escape-simulation",
+                "manifest": os.path.join("manifests", "container-escape.yaml"),
+                "script": os.path.join("scripts", "container-escape.sh")
+            },
+            "privilege-escalation": {
+                "job": "privilege-escalation-simulation",
+                "manifest": os.path.join("manifests", "privilege-escalation.yaml"),
+                "script": os.path.join("scripts", "privilege-escalation.sh")
+            },
+            "apt-simulation": {
+                "job": "apt-simulation",
+                "manifest": os.path.join("manifests", "apt-simulation.yaml"),
+                "script": os.path.join("scripts", "apt-simulation.sh")
+            },
+            "binary-drift": {
+                "job": "binary-drift-simulation",
+                "manifest": os.path.join("manifests", "binary-drift.yaml")
+            }
+        }
+
+        self.custom_jobs = []
+        for scenario in scenarios:
+            workload = workload_map.get(scenario)
+            if not workload:
+                print(f"\u26a0\ufe0f  Scenario '{scenario}' is not implemented yet; skipping custom workload")
+                continue
+
+            manifest = workload["manifest"]
+            if not os.path.exists(manifest):
+                raise FileNotFoundError(f"Scenario manifest not found: {manifest}")
+
+            job_name = workload["job"]
+            script = workload.get("script")
+            if script:
+                self.apply_script_config_map(job_name, script)
+
             subprocess.run([
-                "kubectl", "apply", "-f", drift_manifest, "--validate=false"
+                "kubectl", "delete", "job", job_name, "-n", self.NAMESPACE,
+                "--ignore-not-found=true", "--wait=true"
             ], check=True, capture_output=True, text=True, timeout=60)
-            print("\u2705 Binary drift workload deployed")
-        except subprocess.CalledProcessError as e:
-            print(f"\u26a0\ufe0f  Binary drift workload deployment failed: {e.stderr.strip()}")
-        except Exception as e:
-            print(f"\u26a0\ufe0f  Binary drift workload deployment error: {str(e)}")
+            subprocess.run([
+                "kubectl", "apply", "-n", self.NAMESPACE, "-f", manifest
+            ], check=True, capture_output=True, text=True, timeout=60)
+            self.custom_jobs.append((scenario, job_name))
+            print(f"\u2705 {scenario} workload deployed")
+
+    def apply_script_config_map(self, config_map_name: str, script: str):
+        """Create or update a ConfigMap containing a scenario script"""
+        if not os.path.exists(script):
+            raise FileNotFoundError(f"Scenario script not found: {script}")
+
+        with open(script, "r", encoding="utf-8") as source:
+            script_content = source.read().replace("\r\n", "\n")
+
+        config_map = {
+            "apiVersion": "v1",
+            "kind": "ConfigMap",
+            "metadata": {
+                "name": config_map_name,
+                "namespace": self.NAMESPACE
+            },
+            "data": {
+                "simulation.sh": script_content
+            }
+        }
+        subprocess.run([
+            "kubectl", "apply", "-n", self.NAMESPACE, "-f", "-"
+        ], input=json.dumps(config_map), check=True, capture_output=True, text=True,
+            encoding="utf-8", errors="replace", timeout=30)
             
     def wait_for_pods(self):
         """Wait for pods to be ready (not pending)"""
+        if self.custom_jobs:
+            return True
+
         print("⏳ Waiting for pods to be ready...")
         
         timeout = self.config["timeouts"]["pod_creation"]
@@ -378,33 +438,63 @@ Available Attack Scenarios:
         print(f"🎯 Running scenarios: {', '.join(scenarios)}")
         
         try:
-            # Follow attacker pod logs like the Microsoft simulation does
             print("📋 Running the scenario...\n")
-            
-            # Use kubectl logs -f with timeout like Microsoft simulation
-            try:
-                subprocess.run([
-                    "kubectl", "logs", "-f", self.ATTACKER, "-n", self.NAMESPACE
-                ], timeout=90)
-            except subprocess.TimeoutExpired:
-                print("⚠️  Scenario did not complete successfully (timeout)")
-                return False
-            
-            # Check if scenario completed successfully by checking last line
-            last_line_result = subprocess.run([
-                "kubectl", "logs", "--tail=1", self.ATTACKER, "-n", self.NAMESPACE
-            ], text=True, capture_output=True)
-            
-            if last_line_result.stdout.strip() == "--- Simulation completed ---":
+
+            has_helm_scenarios = any(scenario in scenarios for scenario in self.config["scenarios"]["basic"])
+            helm_success = not has_helm_scenarios
+            if has_helm_scenarios:
+                try:
+                    subprocess.run([
+                        "kubectl", "logs", "-f", self.ATTACKER, "-n", self.NAMESPACE
+                    ], timeout=self.config["timeouts"]["scenario_execution"])
+                except subprocess.TimeoutExpired:
+                    print("⚠️  Scenario did not complete successfully (timeout)")
+
+                last_line_result = subprocess.run([
+                    "kubectl", "logs", "--tail=1", self.ATTACKER, "-n", self.NAMESPACE
+                ], text=True, capture_output=True)
+                helm_success = last_line_result.stdout.strip() == "--- Simulation completed ---"
+
+            if helm_success:
                 print("\n✅ Scenario completed successfully")
-                return True
             else:
                 print("\n❌ Scenario did not complete successfully")
-                return False
+
+            custom_success = self.collect_custom_workload_results()
+            return helm_success and custom_success
                 
         except Exception as e:
             print(f"❌ Error during scenario execution: {str(e)}")
             return False
+
+    def collect_custom_workload_results(self) -> bool:
+        """Wait for custom Jobs and save their logs"""
+        all_succeeded = True
+        timeout = self.config["timeouts"]["scenario_execution"]
+
+        for scenario, job_name in self.custom_jobs:
+            print(f"\u23f3 Waiting for {scenario} workload...")
+            result = subprocess.run([
+                "kubectl", "wait", "--for=condition=complete", f"job/{job_name}",
+                "-n", self.NAMESPACE, f"--timeout={timeout}s"
+            ], capture_output=True, text=True, timeout=timeout + 10)
+
+            logs = subprocess.run([
+                "kubectl", "logs", f"job/{job_name}", "-n", self.NAMESPACE
+            ], capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=60)
+            log_file = os.path.join(self.log_dir, f"{scenario}.log")
+            with open(log_file, "w", encoding="utf-8") as output:
+                output.write(logs.stdout or "")
+                if logs.stderr:
+                    output.write(f"\n--- stderr ---\n{logs.stderr}")
+
+            if result.returncode == 0:
+                print(f"\u2705 {scenario} workload completed; log: {log_file}")
+            else:
+                all_succeeded = False
+                print(f"\u274c {scenario} workload failed or timed out; log: {log_file}")
+
+        return all_succeeded
             
     def cleanup_pods(self):
         """Clean up simulation pods"""
@@ -428,22 +518,24 @@ Available Attack Scenarios:
     def cleanup_all(self):
         """Complete cleanup of all simulation resources"""
         print("🧹 Performing complete cleanup...")
-        
+
         try:
-            # Uninstall helm release
             subprocess.run([
                 "helm", "uninstall", self.HELM_RELEASE, 
                 "-n", self.NAMESPACE
             ], capture_output=True, timeout=60)
-            
-            # Delete namespace
+        except FileNotFoundError:
+            pass
+        except Exception as e:
+            print(f"⚠️  Helm cleanup error: {str(e)}")
+
+        try:
             subprocess.run([
                 "kubectl", "delete", "namespace", self.NAMESPACE, 
                 "--ignore-not-found=true"
-            ], capture_output=True, timeout=120)
-            
+            ], check=True, capture_output=True, timeout=120)
+
             print("✅ Complete cleanup finished")
-            
         except Exception as e:
             print(f"⚠️  Error during cleanup: {str(e)}")
             
@@ -593,20 +685,24 @@ def main():
     
     if args.cleanup_only:
         simulation.cleanup_all()
-        return
+        return 0
         
     if args.scenarios:
         # Direct scenario execution
         print(f"🎯 Running scenarios: {', '.join(args.scenarios)}")
-        simulation.deploy_simulation_pods(args.scenarios)
-        if simulation.wait_for_pods():
-            success = simulation.run_scenarios(args.scenarios)
-            simulation.generate_report(args.scenarios, success)
-        simulation.cleanup_all()
+        success = False
+        try:
+            simulation.deploy_simulation_pods(args.scenarios)
+            if simulation.wait_for_pods():
+                success = simulation.run_scenarios(args.scenarios)
+                simulation.generate_report(args.scenarios, success)
+        finally:
+            simulation.cleanup_all()
+        return 0 if success else 1
     else:
         # Interactive mode
-        simulation.run()
+        return 0 if simulation.run() else 1
 
 
 if __name__ == '__main__':
-    main()
+    sys.exit(main())

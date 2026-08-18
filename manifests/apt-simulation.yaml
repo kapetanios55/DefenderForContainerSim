@@ -1,0 +1,36 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: apt-simulation
+  labels:
+    app.kubernetes.io/name: defender-container-simulation
+    app.kubernetes.io/component: apt-simulation
+spec:
+  backoffLimit: 0
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: defender-container-simulation
+        app.kubernetes.io/component: apt-simulation
+    spec:
+      restartPolicy: Never
+      containers:
+        - name: apt-simulation
+          image: mcr.microsoft.com/cbl-mariner/base/core:2.0
+          command: ["/bin/bash", "/simulation/simulation.sh"]
+          volumeMounts:
+            - name: simulation-script
+              mountPath: /simulation
+              readOnly: true
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              cpu: 250m
+              memory: 256Mi
+      volumes:
+        - name: simulation-script
+          configMap:
+            name: apt-simulation
+            defaultMode: 0555

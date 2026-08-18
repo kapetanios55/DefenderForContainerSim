@@ -1,0 +1,37 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: binary-drift-simulation
+  labels:
+    app.kubernetes.io/name: defender-container-simulation
+    app.kubernetes.io/component: binary-drift
+spec:
+  backoffLimit: 0
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: defender-container-simulation
+        app.kubernetes.io/component: binary-drift
+    spec:
+      restartPolicy: Never
+      containers:
+        - name: binary-drift
+          image: mcr.microsoft.com/cbl-mariner/base/core:2.0
+          command:
+            - /bin/sh
+            - -c
+            - |
+              set -eu
+              echo "Creating executable outside the original image filesystem"
+              cp /bin/sleep /tmp/container-maintenance
+              chmod 755 /tmp/container-maintenance
+              echo "Executing drift binary: /tmp/container-maintenance"
+              /tmp/container-maintenance 30
+              echo "Binary drift simulation completed"
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              cpu: 100m
+              memory: 128Mi

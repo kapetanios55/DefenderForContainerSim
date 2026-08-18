@@ -62,7 +62,7 @@ az aks show --name YOUR_CLUSTER_NAME --resource-group YOUR_RESOURCE_GROUP
    ```bash
    kubectl get ds microsoft-defender-collector-ds -n kube-system
    ```
-3. **Helm 3.x** installed locally
+3. **Helm 3.x** installed locally for the Microsoft baseline scenarios
 4. **Python 3.7+** installed
 5. **kubectl** configured for your target cluster:
    ```bash
@@ -125,6 +125,21 @@ The tool supports flexible configuration through YAML files. See `configs/` dire
 ## Enhanced Scenarios
 
 Beyond the original Microsoft scenarios, this tool includes:
+
+The following enhanced scenarios run as dedicated Kubernetes Jobs and do not require Helm:
+
+- `container-escape` - Privileged workload with host PID, host network, host filesystem, and containerd socket access
+- `privilege-escalation` - Privileged container checks for capabilities, writable host paths, service account tokens, and escalation opportunities
+- `apt-simulation` - Multi-stage reconnaissance, credential access, discovery, persistence, command-and-control, and impact simulation
+- `binary-drift` - Copies and executes a binary from a writable path outside the original image filesystem
+
+Run them directly:
+
+```bash
+python enhanced_simulation.py --scenarios container-escape privilege-escalation apt-simulation binary-drift
+```
+
+Each Job's output and the consolidated execution report are saved under the timestamped `logs/` directory. The simulation namespace is removed automatically after non-interactive runs.
 
 ### Advanced Persistent Threat (APT) Simulation
 - Multi-stage attack chains

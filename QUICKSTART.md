@@ -29,7 +29,12 @@ python enhanced_simulation.py --scenarios recon secrets crypto
 
 #### Option E: Include Binary Drift
 ```bash
-python enhanced_simulation.py --scenarios all
+python enhanced_simulation.py --scenarios binary-drift
+```
+
+#### Option F: Run Implemented Enhanced Scenarios
+```bash
+python enhanced_simulation.py --scenarios container-escape privilege-escalation apt-simulation binary-drift
 ```
 
 ### 3. Monitor Defender Alerts

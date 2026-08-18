@@ -14,25 +14,22 @@
 python enhanced_simulation.py
 ```
 
-```bash
-```
-
-#### Option C: Custom Configuration
+#### Option B: Custom Configuration
 ```bash
 python enhanced_simulation.py --config configs/aks-testing.yaml
 ```
 
-#### Option D: Specific Scenarios
+#### Option C: Microsoft Baseline Scenarios
 ```bash
-python enhanced_simulation.py --scenarios recon secrets crypto
+python enhanced_simulation.py --scenarios recon lateral-mov secrets crypto webshell
 ```
 
-#### Option E: Include Binary Drift
+#### Option D: Include Binary Drift
 ```bash
 python enhanced_simulation.py --scenarios binary-drift
 ```
 
-#### Option F: Run Implemented Enhanced Scenarios
+#### Option E: Run Implemented Enhanced Scenarios
 ```bash
 python enhanced_simulation.py --scenarios container-escape privilege-escalation apt-simulation binary-drift
 ```
@@ -40,17 +37,15 @@ python enhanced_simulation.py --scenarios container-escape privilege-escalation 
 ### 3. Monitor Defender Alerts
 
 While the simulation runs, monitor alerts in:
-- **Azure Security Center** → Security alerts
-- **Microsoft Defender for Cloud** → Security alerts
-- **Azure Monitor** → Logs
+- **Microsoft Defender for Cloud** > **Security alerts**
 
 ### 4. Expected Timeline
 
 | Time | What to Expect |
 |------|----------------|
 | 0-2 min | Pod deployment and startup |
-| 2-5 min | Attack scenario execution |  
-| 5-15 min | First Defender alerts appear |
+| 0-5 min | Attack scenario execution |  
+| 1-15 min | First Defender alerts can appear |
 | 15-60 min | All alerts should be visible |
 
 ### 5. Common Defender Alerts
@@ -83,6 +78,9 @@ kubectl describe pod <pod-name> -n enhanced-mdc-simulation
 **No alerts appearing?**
 - Check Defender for Containers is enabled
 - Verify sensor is running: `kubectl get ds microsoft-defender-collector-ds -n kube-system`
+- Confirm every sensor pod is ready: `kubectl get pods -n kube-system -l dsName=microsoft-defender-collector`
+- Run the five Microsoft baseline scenarios shown above; custom Jobs are not guaranteed to produce the same alerts
+- Check **Microsoft Defender for Cloud > Security alerts**, not only the cluster's Container Insights workspace
 - Some alerts take up to 1 hour to appear
 
 **Permission errors?**
@@ -106,7 +104,6 @@ python enhanced_simulation.py --cleanup-only
 Check the `logs/` directory for:
 - Execution logs
 - Generated reports
-- Attack timelines
 
 ## 🆘 Need Help?
 

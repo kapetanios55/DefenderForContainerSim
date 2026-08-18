@@ -19,10 +19,9 @@ This tool simulates various attack scenarios commonly used in real-world attacks
 - **Binary Drift** - Execute binaries not in the original image
 
 ### Enhanced Features
-- **Multi-cluster support** - Target specific AKS clusters by resource ID
-- **Enhanced reporting** - Detailed attack logs and timeline
-- **Custom scenarios** - Support for user-defined attack scenarios
-- **Alert correlation** - Track which attacks trigger which Defender alerts
+- **Multi-cluster configuration** - Select an AKS cluster through environment variables or YAML
+- **Enhanced reporting** - Timestamped execution reports and per-Job logs
+- **Additional scenarios** - Dedicated Kubernetes Jobs for enhanced runtime simulations
 - **Automated cleanup** - Comprehensive resource cleanup after testing
 - **Configuration management** - Easy configuration for different environments
 
@@ -38,6 +37,14 @@ This tool simulates various attack scenarios commonly used in real-world attacks
 export AZURE_SUBSCRIPTION_ID="your-subscription-id"
 export AZURE_RESOURCE_GROUP="your-resource-group"
 export AZURE_CLUSTER_NAME="your-cluster-name"
+```
+
+PowerShell:
+
+```powershell
+$env:AZURE_SUBSCRIPTION_ID = "your-subscription-id"
+$env:AZURE_RESOURCE_GROUP = "your-resource-group"
+$env:AZURE_CLUSTER_NAME = "your-cluster-name"
 ```
 
 **Option 2: Update Configuration File**
@@ -62,7 +69,7 @@ az aks show --name YOUR_CLUSTER_NAME --resource-group YOUR_RESOURCE_GROUP
    ```bash
    kubectl get ds microsoft-defender-collector-ds -n kube-system
    ```
-3. **Helm 3.x** installed locally for the Microsoft baseline scenarios
+3. **Helm 3.x or later** installed locally for the Microsoft baseline scenarios
 4. **Python 3.7+** installed
 5. **kubectl** configured for your target cluster:
    ```bash
@@ -73,8 +80,8 @@ az aks show --name YOUR_CLUSTER_NAME --resource-group YOUR_RESOURCE_GROUP
 
 1. Clone this repository:
    ```bash
-   git clone <this-repo>
-   cd DefenderForContainers
+   git clone https://github.com/kapetanios55/DefenderForContainerSim.git
+   cd DefenderForContainerSim
    ```
 
 2. Install Python dependencies:
@@ -99,21 +106,31 @@ Or run with specific configuration:
 python enhanced_simulation.py --config configs/aks-testing.yaml
 ```
 
+Run all Microsoft baseline scenarios with known Defender detection signatures:
+
+```bash
+python enhanced_simulation.py --scenarios recon lateral-mov secrets crypto webshell
+```
+
 ## Configuration
 
 The tool supports flexible configuration through YAML files. See `configs/` directory for examples.
 
 ## Expected Defender Alerts
 
+The Microsoft baseline scenarios use the official Defender for Cloud simulation chart and are the recommended detection-validation path. Alert names can change as Defender analytics evolve.
+
 | **Scenario** | **Expected Alerts** |
 |--------------|-------------------|
-| Reconnaissance | Possible Web Shell activity detected, Suspicious Kubernetes service account operation detected, Network scanning tool detected |
-| Lateral Movement | Possible Web Shell activity detected, Access to cloud metadata service detected |
-| Secrets Gathering | Possible Web Shell activity detected, Sensitive files access detected, Possible secret reconnaissance detected |
-| Crypto Mining | Possible Web Shell activity detected, Kubernetes CPU optimization detected, Command within a container accessed `ld.so.preload`, Possible Crypto miners download detected, A drift binary detected executing in the container |
-| Container Escape | Privileged container detected, Suspicious mount detected, Container with sensitive volume mount detected |
-| Privilege Escalation | Privileged operation detected, Container with high privileges detected |
-| Binary Drift | Binary drift detected in container, A drift binary detected executing in the container |
+| Reconnaissance | Suspicious Kubernetes service account operation detected, Network scanning tool detected |
+| Lateral Movement | Access to cloud metadata service detected |
+| Secrets Gathering | Sensitive files access detected, Possible secret reconnaissance detected |
+| Crypto Mining | Kubernetes CPU optimization detected, Command within a container accessed `ld.so.preload`, Possible Cryptocoinminer download detected, Digital currency mining related behavior detected, A drift binary detected executing in the container |
+| Web Shell | Possible Web Shell activity detected |
+
+Alerts are generated asynchronously. In the validated AKS run, 11 alerts appeared in Microsoft Defender for Cloud about one minute after the baseline simulation completed. Other environments can take longer.
+
+View alerts under **Microsoft Defender for Cloud > Security alerts**. The Defender sensor's configured workspace can differ from the cluster's Container Insights workspace, so querying the AKS monitoring workspace is not a reliable substitute for the Defender alert page.
 
 ## Best Practices
 
@@ -126,7 +143,7 @@ The tool supports flexible configuration through YAML files. See `configs/` dire
 
 Beyond the original Microsoft scenarios, this tool includes:
 
-The following enhanced scenarios run as dedicated Kubernetes Jobs and do not require Helm:
+The following enhanced scenarios run as dedicated Kubernetes Jobs and do not require Helm. They generate realistic Kubernetes and runtime activity, but they are not guaranteed to map one-to-one to a Defender alert:
 
 - `container-escape` - Privileged workload with host PID, host network, host filesystem, and containerd socket access
 - `privilege-escalation` - Privileged container checks for capabilities, writable host paths, service account tokens, and escalation opportunities

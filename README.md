@@ -4,6 +4,8 @@
 
 An enhanced version of Microsoft's Defender for Cloud Attack Simulation tool, specifically adapted for testing Defender for Containers in AKS environments with additional real-world attack scenarios and improved usability.
 
+> **⚠️ SAFETY**: The enhanced scenarios run **real** attack techniques, not mocks. `container-escape` and `privilege-escalation` deploy privileged Jobs with host namespaces and the node filesystem mounted, which grant effective host-root on whatever node they land on. Run this tool **only against a disposable test cluster you own and are authorised to attack**, never a shared or production cluster. The tool shows your current `kubectl` context and asks you to confirm the target before running; pass `--yes`/`-y` to skip that prompt only in automation against a known-safe cluster.
+
 ## Overview
 
 This tool simulates various attack scenarios commonly used in real-world attacks against containerized environments:

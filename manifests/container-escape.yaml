@@ -1,3 +1,8 @@
+# WARNING: This Job runs with privileged + hostPID + hostNetwork and mounts the node
+# root filesystem and the containerd socket. It is a REAL container-escape primitive,
+# not a mock: it grants effective host-root on the node it lands on. Run it ONLY on a
+# disposable test cluster you own. The /host and containerd mounts are read-only here;
+# the escape scenario only reads from them.
 apiVersion: batch/v1
 kind: Job
 metadata:
@@ -28,8 +33,10 @@ spec:
               readOnly: true
             - name: host-root
               mountPath: /host
+              readOnly: true
             - name: containerd-socket
               mountPath: /run/containerd/containerd.sock
+              readOnly: true
           resources:
             requests:
               cpu: 50m

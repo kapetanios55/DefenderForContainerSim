@@ -15,7 +15,8 @@ from typing import Dict, List, Optional
 class EnhancedDefenderSimulation:
     """Enhanced Defender for Containers Attack Simulation"""
     
-    def __init__(self, config_file: Optional[str] = None):
+    def __init__(self, config_file: Optional[str] = None, assume_yes: bool = False):
+        self.assume_yes = assume_yes
         self.load_config(config_file)
         self.setup_logging()
         self.custom_jobs = []
@@ -70,9 +71,10 @@ class EnhancedDefenderSimulation:
         
         if config_file and os.path.exists(config_file):
             with open(config_file, 'r') as f:
-                user_config = yaml.safe_load(f)
-                # Merge configurations
-                self.config = {**default_config, **user_config}
+                user_config = yaml.safe_load(f) or {}
+                # Merge configurations one level deep so a user config that sets only
+                # part of a section (e.g. helm.release) does not drop the other keys.
+                self.config = self._deep_merge(default_config, user_config)
         else:
             self.config = default_config
             
@@ -84,6 +86,18 @@ class EnhancedDefenderSimulation:
         self.ATTACKER = "mdc-simulation-attacker"
         self.VICTIM = "mdc-simulation-victim"
         
+    @staticmethod
+    def _deep_merge(base: Dict, override: Dict) -> Dict:
+        """Merge override onto base one level deep, so nested sections keep their
+        unspecified keys instead of being replaced wholesale."""
+        merged = dict(base)
+        for key, value in override.items():
+            if isinstance(value, dict) and isinstance(merged.get(key), dict):
+                merged[key] = {**merged[key], **value}
+            else:
+                merged[key] = value
+        return merged
+
     def setup_logging(self):
         """Setup logging directory and files"""
         self.log_dir = f"logs/{datetime.now().strftime('%Y%m%d_%H%M%S')}"
@@ -149,6 +163,36 @@ class EnhancedDefenderSimulation:
             
         return True
         
+    def confirm_target_cluster(self) -> bool:
+        """Show the live kubectl context and make the operator confirm it before any
+        aggressive scenario runs. These scenarios include real host-root primitives, so
+        firing them at the wrong cluster must be hard to do by accident."""
+        try:
+            context = subprocess.run(
+                ["kubectl", "config", "current-context"],
+                capture_output=True, text=True, timeout=30
+            ).stdout.strip()
+        except Exception as e:
+            print(f"⚠️  Could not determine current kubectl context: {str(e)}")
+            context = "<unknown>"
+
+        print("\n⚠️  TARGET CONFIRMATION")
+        print("   These scenarios run real attack techniques (including host-root)")
+        print("   and must only run against a disposable test cluster.")
+        print(f"   Current kubectl context : {context or '<none>'}")
+        print(f"   Configured cluster      : "
+              f"{self.config['aks_cluster']['resource_group']}/{self.config['aks_cluster']['cluster_name']}")
+
+        if self.assume_yes:
+            print("   --yes supplied; proceeding without a prompt.\n")
+            return True
+
+        response = input("   Run against this cluster? (y/N): ").strip()
+        if response.lower() != 'y':
+            print("❌ Target not confirmed. Aborting.")
+            return False
+        return True
+
     def show_scenario_menu(self) -> str:
         """Display scenario selection menu"""
         menu = """
@@ -389,7 +433,7 @@ Available Attack Scenarios:
                 ], capture_output=True, text=True)
                 
                 # If either pod is still pending, continue waiting
-                if '"Pending"' in (attacker_result.stdout, victim_result.stdout):
+                if '"Pending"' in attacker_result.stdout or '"Pending"' in victim_result.stdout:
                     # Check if containers are creating or failed
                     if attacker_result.stdout == '"Pending"':
                         attacker_waiting = subprocess.run([
@@ -415,7 +459,7 @@ Available Attack Scenarios:
                     continue
                 
                 # Check for failed pods
-                if '"Failed"' in (attacker_result.stdout, victim_result.stdout):
+                if '"Failed"' in attacker_result.stdout or '"Failed"' in victim_result.stdout:
                     print(f"❌ Pod creation failed:")
                     print(f"  Attacker: {attacker_result.stdout}")
                     print(f"  Victim: {victim_result.stdout}")
@@ -431,8 +475,7 @@ Available Attack Scenarios:
                 
         print("❌ Timeout waiting for pods to be ready")
         return False
-        return False
-        
+
     def run_scenarios(self, scenarios: List[str]):
         """Execute the attack scenarios"""
         print(f"🎯 Running scenarios: {', '.join(scenarios)}")
@@ -632,12 +675,16 @@ Execution logs are available in: `{self.log_dir}/`
                 return False
                 
             print(f"\n🎯 Selected scenarios: {', '.join(scenarios)}")
+
+            if not self.confirm_target_cluster():
+                return False
+
             confirm = input("Continue with execution? (y/N): ")
-            
+
             if confirm.lower() != 'y':
                 print("❌ Execution cancelled by user")
                 return False
-                
+
             # Execute simulation
             self.deploy_simulation_pods(scenarios)
             
@@ -678,18 +725,22 @@ def main():
     parser.add_argument('--config', '-c', help='Configuration file path')
     parser.add_argument('--scenarios', '-s', nargs='+', help='Specific scenarios to run')
     parser.add_argument('--cleanup-only', action='store_true', help='Only perform cleanup')
-    
+    parser.add_argument('--yes', '-y', action='store_true',
+                        help='Skip the target-cluster confirmation prompt (for automation)')
+
     args = parser.parse_args()
-    
-    simulation = EnhancedDefenderSimulation(args.config)
-    
+
+    simulation = EnhancedDefenderSimulation(args.config, assume_yes=args.yes)
+
     if args.cleanup_only:
         simulation.cleanup_all()
         return 0
-        
+
     if args.scenarios:
         # Direct scenario execution
         print(f"🎯 Running scenarios: {', '.join(args.scenarios)}")
+        if not simulation.confirm_target_cluster():
+            return 1
         success = False
         try:
             simulation.deploy_simulation_pods(args.scenarios)

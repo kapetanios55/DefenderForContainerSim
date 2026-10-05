@@ -1,3 +1,6 @@
+# WARNING: This Job runs privileged with the node root filesystem mounted (read-only).
+# It performs REAL privilege-escalation reconnaissance against the host, not a mock.
+# Run it ONLY on a disposable test cluster you own.
 apiVersion: batch/v1
 kind: Job
 metadata:
@@ -27,6 +30,7 @@ spec:
               readOnly: true
             - name: host-root
               mountPath: /host
+              readOnly: true
           resources:
             requests:
               cpu: 50m
